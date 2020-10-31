@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django import forms
+
 from . import models
 
 
@@ -19,9 +21,15 @@ class PostTitleFilter(admin.SimpleListFilter):
         ]
 
 
+class PostInline(admin.TabularInline):
+    model = models.Post
+    fields = ('title', 'body')
+    extra = 1
+
+
 @admin.register(models.Category)
 class CategoryAdmin(admin.ModelAdmin):
-    pass
+    inlines = [PostInline]
 
 
 @admin.register(models.Tag)
@@ -29,8 +37,36 @@ class TagAdmin(admin.ModelAdmin):
     pass
 
 
+class PostAdminForm(forms.ModelForm):
+    class Meta:
+        labels = {
+            'title': 'ブログタイトル'
+        }
+    
+    def clean(self):
+        body = self.cleaned_data.get('body')
+        if '<' in body:
+            raise forms.ValidationError('HTMLタグは使えません。')
+        
+
 @admin.register(models.Post)
 class PostAdmin(admin.ModelAdmin):
+    readonly_fields = ('created', 'updated')
+    fieldsets = [
+        (None, {'fields': ('title', )}),
+        ('コンテンツ', {'fields': ('body', )}),
+        ('分類', {'fields': ('category', 'tags')}),
+        ('メタ', {'fields': ('created', 'updated')})
+    ]
+    form = PostAdminForm
+    filter_horizontal = ('tags',)
+    
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        
+    class Media:
+        js = ('post.js',)
+    
     list_display = ('id', 'title', 'category', 'tags_summary', 'published', 'created', 'updated')
     list_editable = ('title', 'category')
     search_fields = ('title', 'category__name', 'tags__name', 'created', 'updated')
