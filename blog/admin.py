@@ -58,11 +58,14 @@ class PostAdmin(admin.ModelAdmin):
         ('分類', {'fields': ('category', 'tags')}),
         ('メタ', {'fields': ('created', 'updated')})
     ]
+
     form = PostAdminForm
     filter_horizontal = ('tags',)
     
     def save_model(self, request, obj, form, change):
+        print("before save")
         super().save_model(request, obj, form, change)
+        print("after save")
         
     class Media:
         js = ('post.js',)
